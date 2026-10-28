@@ -4,7 +4,9 @@
 return {
   {
     "aarcThom/rhino_vim",
-    cmd = "Rhino",
+    -- Not lazy-loaded so :checkhealth rhino can find it; startup only defines :Rhino,
+    -- the modules load on first use
+    lazy = false,
     opts = {},
     keys = {
       { "<leader>Rb", "<cmd>Rhino build<cr>", desc = "Build" },
