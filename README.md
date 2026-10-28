@@ -83,19 +83,47 @@ This runs `dotnet new install Rhino.Templates`.
 
 ### 7. WSL only: get the Windows netcoredbg
 
-Rhino runs on Windows, so the debugger attaching to it must be the Windows build of netcoredbg. Use one of these:
+*Skip this step if Neovim runs on Windows.*
 
-- **If you also use Neovim on Windows** with the `lang.dotnet` extra, its Mason already has netcoredbg in
-  `%LOCALAPPDATA%\nvim-data\mason`. That's the default and needs no setup.
-- **Otherwise,** download `netcoredbg-win64.zip` from [netcoredbg releases](https://github.com/Samsung/netcoredbg/releases),
-  extract it (e.g. to `C:\tools\netcoredbg`) and point the plugin at it:
+**Why:** netcoredbg is the debugger. It has to run on the same OS as the program it debugs, so when Rhino runs on
+Windows it has to be `netcoredbg.exe`, the Windows build. The netcoredbg that Mason installed in step 5 is the Linux
+build: it's fine for Linux .NET programs but can't attach to Rhino. The plugin runs `netcoredbg.exe` from WSL for you;
+you only need to have it on the Windows drive.
 
-  ```lua
-  return {
-    { "aarcThom/rhino_vim", import = "rhino.specs" },
-    { "aarcThom/rhino_vim", opts = { netcoredbg_exe = "C:/tools/netcoredbg/netcoredbg.exe" } },
-  }
-  ```
+**a. Check whether you already have it.** If you also use LazyVim on Windows with the `lang.dotnet` extra, its Mason
+has already installed it. Run this in WSL:
+
+```bash
+ls /mnt/c/Users/*/AppData/Local/nvim-data/mason/packages/netcoredbg/netcoredbg/netcoredbg.exe
+```
+
+If that prints a path, you're done: the plugin looks there by default. Go to step 8.
+
+**b. Otherwise, download it.** Run this in WSL; it puts the debugger in `C:\tools\netcoredbg\`:
+
+```bash
+mkdir -p /mnt/c/tools
+curl -L -o /tmp/netcoredbg-win64.zip https://github.com/Samsung/netcoredbg/releases/latest/download/netcoredbg-win64.zip
+unzip -o /tmp/netcoredbg-win64.zip -d /mnt/c/tools   # the zip contains a netcoredbg\ folder
+ls /mnt/c/tools/netcoredbg/netcoredbg.exe            # should print the path
+```
+
+(Or by hand: download `netcoredbg-win64.zip` from
+[netcoredbg releases](https://github.com/Samsung/netcoredbg/releases) and extract it to `C:\tools`.)
+
+**c. Tell the plugin where it is.** Edit `~/.config/nvim/lua/plugins/rhino.lua` from step 5 so it reads:
+
+```lua
+return {
+  {
+    "aarcThom/rhino_vim",
+    import = "rhino.specs",
+    opts = { netcoredbg_exe = "C:/tools/netcoredbg/netcoredbg.exe" },
+  },
+}
+```
+
+Either a Windows path (`C:/tools/...`) or the WSL path (`/mnt/c/tools/...`) works. Restart Neovim.
 
 ### 8. Check the setup
 
@@ -143,7 +171,7 @@ return {
 
 | Command | Key | What it does |
 |---|---|---|
-| `:Rhino new [template] [name]` | `<leader>Rn` | `dotnet new` from Rhino.Templates. `rhino` / `grasshopper` create a project in the working directory and `:cd` into it; `rhinocommand` / `grasshoppercomponent` add to the current project |
+| `:Rhino new [template] [name]` | `<leader>Rn` | `dotnet new` from Rhino.Templates. `rhino` / `grasshopper` create a project in the working directory and `:cd` into it; `rhinocommand` / `ghcomponent` add to the current project |
 | `:Rhino build` | `<leader>Rb` | `dotnet build` the nearest `.csproj`; errors and warnings go to the quickfix list |
 | `:Rhino launch` | `<leader>Rl` | Build, start Rhino with your plug-in loaded and attach the debugger |
 | `:Rhino grasshopper` | `<leader>Rg` | Same, and open Grasshopper so your `.gha` loads |

@@ -3,7 +3,7 @@ local M = {}
 
 -- Templates that create a project (and take --version), as opposed to items added to one
 M.project_templates = { "rhino", "grasshopper" }
-M.item_templates = { "rhinocommand", "grasshoppercomponent" }
+M.item_templates = { "rhinocommand", "ghcomponent" }
 
 function M.names()
   return vim.list_extend(vim.list_slice(M.project_templates), M.item_templates)
