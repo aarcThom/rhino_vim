@@ -30,6 +30,18 @@ function M.check()
   end
 
   if check_executable("dotnet", "Install the .NET SDK: winget install Microsoft.DotNet.SDK.10") then
+    -- `dotnet --version` resolves the SDK the way builds and Roslyn do, honouring global.json
+    local root = require("rhino.build").project_root()
+    local sdk = vim.system({ "dotnet", "--version" }, { cwd = root, text = true }):wait()
+    if sdk.code == 0 then
+      vim.health.ok(("SDK %s for %s"):format(vim.trim(sdk.stdout), root))
+    else
+      vim.health.error(
+        "No installed .NET SDK matches the global.json for " .. root,
+        "Install the SDK version global.json asks for, then restart the Roslyn daemon (see the README)"
+      )
+    end
+
     local list = vim.system({ "dotnet", "new", "list", "rhino" }, { text = true }):wait()
     if (list.stdout or ""):find("Rhino3D Plug-In", 1, true) then
       vim.health.ok("Rhino.Templates installed")

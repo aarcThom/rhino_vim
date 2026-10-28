@@ -213,6 +213,25 @@ Neovim, Roslyn and `dotnet build` run in Linux; Rhino and the debugger run on Wi
   matches the paths Neovim sends against them.
 - The templates' `.vscode/launch.json` entries (`coreclr`) don't work from WSL; use the `Rhino:` configurations.
 
+## Troubleshooting
+
+### No RhinoCommon completions
+
+Completions for RhinoCommon (and your own other classes) only appear once Roslyn has loaded the project; until then it
+treats each file on its own. Open a `.cs` file, wait for the loading notification to finish, then check `:LspLog` for
+`Error while loading ....csproj`. Common causes:
+
+- **Missing SDK:** your `global.json` asks for an SDK you don't have (`:checkhealth rhino` reports this). Install that
+  version. On Fedora, dnf only ships the 10.0.1xx SDKs, so use
+  [dotnet-install.sh](https://learn.microsoft.com/dotnet/core/tools/dotnet-install-script) for a newer feature band.
+- **Stale Roslyn daemon:** Roslyn keeps one shared server running for 15 minutes after Neovim exits, and the next Neovim
+  reconnects to it. If that server started before you installed or changed an SDK, it keeps the old environment. Stop
+  it, then reopen Neovim:
+
+  ```bash
+  pkill -f Microsoft.CodeAnalysis.LanguageServer
+  ```
+
 ## Developing this plugin
 
 Use lazy.nvim's dev mode to load your checkout instead of the GitHub copy. In `lua/config/lazy.lua`:
