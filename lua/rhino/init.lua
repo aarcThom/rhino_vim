@@ -17,7 +17,7 @@ M.defaults = {
   -- Seconds to wait for Rhino to load .NET Core before giving up on attaching
   attach_timeout = 30,
   -- Path to netcoredbg, or nil to use Mason's. From WSL this must be the Windows netcoredbg.exe;
-  -- the default is the one in the Windows Neovim's Mason (%LOCALAPPDATA%\nvim-data\mason)
+  -- the default is the Windows Neovim's Mason (%LOCALAPPDATA%\nvim-data\mason), else C:\tools\netcoredbg
   netcoredbg_exe = nil,
   -- WSL only: Windows folder the build output is copied to for Rhino to load, or nil for %LOCALAPPDATA%\Temp\rhino_vim
   wsl_stage_dir = nil,

@@ -68,7 +68,7 @@ function M.check()
   elseif windows.wsl then
     vim.health.error(
       "Windows netcoredbg.exe not found: " .. netcoredbg,
-      "Run :MasonInstall netcoredbg in Neovim on Windows, or set `netcoredbg_exe`"
+      "Extract netcoredbg-win64.zip to C:\\tools (see the README), or set `netcoredbg_exe`, then restart Neovim"
     )
   else
     vim.health.error("netcoredbg not found", "Run :MasonInstall netcoredbg")

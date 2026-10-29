@@ -68,7 +68,11 @@ function M.netcoredbg()
     return windows.local_path(exe)
   end
   if windows.wsl then
-    return vim.fs.joinpath(windows.localappdata(), "nvim-data/mason/packages/netcoredbg/netcoredbg/netcoredbg.exe")
+    -- A Windows Neovim's Mason install, else where the README's download puts it
+    local mason =
+      vim.fs.joinpath(windows.localappdata(), "nvim-data/mason/packages/netcoredbg/netcoredbg/netcoredbg.exe")
+    local tools = windows.local_path("C:/tools/netcoredbg/netcoredbg.exe")
+    return vim.fn.executable(mason) == 0 and vim.fn.executable(tools) == 1 and tools or mason
   end
   exe = vim.fn.exepath("netcoredbg")
   return exe ~= "" and exe or vim.fs.joinpath(vim.fn.stdpath("data"), "mason/bin/netcoredbg")

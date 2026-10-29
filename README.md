@@ -13,9 +13,8 @@ Works with Neovim running on Windows, or in WSL with Rhino launched and debugged
   Windows, your distro's `dotnet-sdk` package in WSL)
 - Rhino 8 or newer on Windows, running in .NET Core mode (the default in Rhino 8)
 - The LazyVim extras `lang.dotnet` and `dap.core` — enable them with `:LazyExtras`
-- WSL only: the **Windows** build of netcoredbg. The default is the one from Mason in a Windows Neovim
-  (`%LOCALAPPDATA%\nvim-data\mason`); otherwise download it from
-  [netcoredbg releases](https://github.com/Samsung/netcoredbg/releases) and set `netcoredbg_exe`
+- WSL only: the **Windows** build of netcoredbg. The plugin finds it in a Windows Neovim's Mason
+  (`%LOCALAPPDATA%\nvim-data\mason`) or in `C:\tools\netcoredbg\`; anywhere else, set `netcoredbg_exe`
 
 ## Installation
 
@@ -111,19 +110,25 @@ ls /mnt/c/tools/netcoredbg/netcoredbg.exe            # should print the path
 (Or by hand: download `netcoredbg-win64.zip` from
 [netcoredbg releases](https://github.com/Samsung/netcoredbg/releases) and extract it to `C:\tools`.)
 
-**c. Tell the plugin where it is.** Edit `~/.config/nvim/lua/plugins/rhino.lua` from step 5 so it reads:
+The plugin also looks in `C:\tools\netcoredbg\`, so there's nothing to configure. If Neovim was open, quit it and
+start it again before step 8.
+
+**c. Somewhere else?** If you put `netcoredbg.exe` in another folder, edit `~/.config/nvim/lua/plugins/rhino.lua` from
+step 5 so it reads:
 
 ```lua
 return {
   {
     "aarcThom/rhino_vim",
     import = "rhino.specs",
-    opts = { netcoredbg_exe = "C:/tools/netcoredbg/netcoredbg.exe" },
+    opts = { netcoredbg_exe = "D:/somewhere/netcoredbg/netcoredbg.exe" },
   },
 }
 ```
 
-Either a Windows path (`C:/tools/...`) or the WSL path (`/mnt/c/tools/...`) works. Restart Neovim.
+Either a Windows path (`D:/...`) or the WSL path (`/mnt/d/...`) works. Then quit Neovim and start it again: plugin
+options are only read at startup, so a Neovim that was already open keeps looking in the default places and
+`:checkhealth rhino` will report netcoredbg.exe as missing.
 
 ### 8. Check the setup
 
@@ -133,6 +138,9 @@ Either a Windows path (`C:/tools/...`) or the WSL path (`/mnt/c/tools/...`) work
 
 This checks Neovim, the platform (Windows / WSL), `dotnet`, the templates, Rhino.exe and netcoredbg, and tells you how
 to fix anything missing.
+
+WSL: if netcoredbg.exe is reported missing even though step 7 put it in place, Neovim probably hasn't been restarted
+since. Quit it, start it again and rerun the check.
 
 ### 9. Try it
 
@@ -160,7 +168,7 @@ return {
       configuration = "Debug", -- build configuration; Rhino loads plug-ins from bin/<configuration>
       build_args = { "-clp:NoSummary" },
       attach_timeout = 30, -- seconds to wait for Rhino to load .NET Core
-      netcoredbg_exe = nil, -- nil = Mason's; from WSL, the Windows Neovim's Mason netcoredbg.exe
+      netcoredbg_exe = nil, -- nil = Mason's; from WSL, the Windows Neovim's Mason or C:/tools/netcoredbg
       wsl_stage_dir = nil, -- WSL: Windows folder for the build output; nil = %LOCALAPPDATA%\Temp\rhino_vim
     },
   },
