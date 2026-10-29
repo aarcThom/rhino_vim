@@ -169,6 +169,7 @@ return {
       configuration = "Debug", -- build configuration; Rhino loads plug-ins from bin/<configuration>
       build_args = { "-clp:NoSummary" },
       attach_timeout = 30, -- seconds to wait for Rhino to load .NET Core
+      launch_timeout = 120, -- seconds to wait for a .rhino.lua `launch` command to print Rhino's pid
       netcoredbg_exe = nil, -- nil = Mason's; from WSL, the Windows Neovim's Mason or C:/tools/netcoredbg
       wsl_stage_dir = nil, -- WSL: Windows folder for the build output; nil = %LOCALAPPDATA%\Temp\rhino_vim
     },
@@ -225,7 +226,42 @@ Neovim, Roslyn and `dotnet build` run in Linux; Rhino and the debugger run on Wi
   matches the paths Neovim sends against them.
 - The templates' `.vscode/launch.json` entries (`coreclr`) don't work from WSL; use the `Rhino:` configurations.
 
+## Custom build and launch (`.rhino.lua`)
+
+Some projects don't fit the default build and launch: a solution with several plug-ins, an output folder other than
+`bin/<configuration>`, `.rhp` files made in a post-build step, or setup Rhino needs before it starts. For these, put a
+`.rhino.lua` file at the project root. It replaces the build, the launch, or both; the debugger still attaches as usual.
+
+```lua
+-- .rhino.lua
+return {
+  -- Replaces `dotnet build` of the nearest .csproj. Errors still go to the quickfix list.
+  -- `dotnet build` takes one project per call, so build several through a shell:
+  build = { "bash", "-c", "dotnet build src/A/A.csproj -c Debug && dotnet build src/B/B.csproj -c Debug" },
+  -- Replaces starting Rhino. The command must start Rhino (in .NET Core mode, /netcore) and print
+  -- `pid=<Windows pid>`, then exit; Neovim attaches the debugger to that pid.
+  launch = { "./scripts/start-rhino.sh" },
+}
+```
+
+- Both are lists of strings, run from the folder containing `.rhino.lua`. The nearest `.rhino.lua` above the current
+  buffer is used, else the one above the working directory.
+- For `:Rhino grasshopper`, the launch command gets `RHINO_VIM_RUNSCRIPT=_Grasshopper` in its environment; pass it to
+  Rhino as `/runscript="_Grasshopper"`.
+- The launch command should exit as soon as it knows the pid: code that runs before the debugger attaches can't be
+  debugged. It has `launch_timeout` seconds.
+- The file runs commands, so Neovim asks whether to trust it the first time, and again whenever it changes (the same
+  mechanism as `'exrc'`). If you answer no, `:Rhino build` and `:Rhino launch` stop rather than use the defaults; allow
+  it later with `:trust .rhino.lua`.
+- `:checkhealth rhino` shows which `.rhino.lua` applies.
+
 ## Troubleshooting
+
+### Rhino frozen after quitting Neovim
+
+If Neovim exits (or netcoredbg is killed) while the debugger is attached, Rhino is left with all its threads suspended
+and stops responding. Stop the debug session first (`<leader>dt`), which closes Rhino, then quit Neovim. A Rhino that's
+already frozen can only be ended from Task Manager.
 
 ### No RhinoCommon completions
 

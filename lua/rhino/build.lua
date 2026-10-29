@@ -29,9 +29,13 @@ function M.msbuild_env()
   return env
 end
 
-local function command()
+-- The build command and its working directory: the project file's `build`, else `dotnet build` of the nearest .csproj
+local function command(project)
+  if project and project.build then
+    return project.build, project.root
+  end
   local config = require("rhino").config
-  return vim.list_extend({ "dotnet", "build", "-c", config.configuration }, config.build_args)
+  return vim.list_extend({ "dotnet", "build", "-c", config.configuration }, config.build_args), M.project_root()
 end
 
 -- MSBuild prints `C:\path\File.cs(12,5): error CS0103: ... [C:\path\Project.csproj]`
@@ -64,12 +68,21 @@ end
 -- and calls `on_done(ok)` when one is given.
 ---@param on_done? fun(ok: boolean)
 function M.build(on_done)
-  vim.notify("dotnet build…", vim.log.levels.INFO, { title = "Rhino" })
-  local opts = { cwd = M.project_root(), text = true, env = M.msbuild_env() }
-  if not on_done then
-    return report(vim.system(command(), opts):wait())
+  local project = require("rhino.project").load()
+  if project == false then
+    if on_done then
+      on_done(false)
+    end
+    return false
   end
-  vim.system(command(), opts, function(result)
+  local cmd, cwd = command(project)
+  local custom = project and project.build
+  vim.notify(custom and "Building (.rhino.lua)…" or "dotnet build…", vim.log.levels.INFO, { title = "Rhino" })
+  local opts = { cwd = cwd, text = true, env = M.msbuild_env() }
+  if not on_done then
+    return report(vim.system(cmd, opts):wait())
+  end
+  vim.system(cmd, opts, function(result)
     vim.schedule(function()
       on_done(report(result))
     end)
