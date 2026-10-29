@@ -72,6 +72,11 @@ function M.check()
     vim.health.warn("Launching and debugging Rhino only works on Windows or WSL")
   end
 
+  local project = require("rhino.project").find()
+  if project then
+    vim.health.info("Build and launch overrides: " .. project)
+  end
+
   if check_executable("dotnet", "Install the .NET SDK: winget install Microsoft.DotNet.SDK.10") then
     -- `dotnet --version` resolves the SDK the way builds and Roslyn do, honouring global.json
     local root = require("rhino.build").project_root()

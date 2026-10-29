@@ -73,32 +73,58 @@ local function spawn(exe, args, env)
   return pid
 end
 
+-- Runs the project file's `launch` command, which starts Rhino its own way and prints `pid=<pid>`.
+-- It gets the Rhino command to run on start, if any, in RHINO_VIM_RUNSCRIPT.
+local function start_project(project, runscript)
+  local env = runscript and { RHINO_VIM_RUNSCRIPT = runscript } or nil
+  local timeout = require("rhino").config.launch_timeout * 1000
+  local result = vim.system(project.launch, { cwd = project.root, text = true, env = env }):wait(timeout)
+  local output = (result.stdout or "") .. (result.stderr or "")
+  local pid = (result.stdout or ""):match("pid=(%d+)")
+  if result.code ~= 0 or not pid then
+    local why = result.code == 124 and result.signal ~= 0 and "timed out" or ("exited with code %d"):format(result.code)
+    return nil, ("%s (%s), expected pid=<pid>:\n%s"):format(table.concat(project.launch, " "), why, output)
+  end
+  return tonumber(pid)
+end
+
 -- Starts Rhino in .NET Core mode with RHINO_PACKAGE_DIRS pointing at the build output, so the
--- project's .rhp/.gha load, and returns its (Windows) pid once it can be attached to (nil on failure).
+-- project's .rhp/.gha load (or through the .rhino.lua `launch` command), and returns its (Windows) pid
+-- once it can be attached to (nil on failure).
 -- Rhino is started here rather than with a netcoredbg "launch" because netcoredbg re-quotes the
 -- arguments, and Rhino only accepts /runscript="..." with the quotes intact.
 ---@param runscript? string Rhino command to run on start, e.g. "_Grasshopper"
 ---@return integer?
 function M.start(runscript)
-  local root = require("rhino.build").project_root()
-  local dir, err = package_dir(root)
-  if not dir then
-    vim.notify(err, vim.log.levels.ERROR, { title = "Rhino" })
+  local project = require("rhino.project").load()
+  if project == false then
     return nil
   end
-  -- Rhino loads .rhp/.gha files found under these folders (same as the Rhino.Templates launch profiles)
-  local env = { RHINO_PACKAGE_DIRS = dir }
 
-  local args = { "/netcore" }
-  if runscript then
-    table.insert(args, ('/runscript="%s"'):format(runscript))
-  end
-
-  local pid
-  if windows.wsl then
-    pid, err = windows.start(windows.windows_path(rhino_exe()), table.concat(args, " "), env)
+  local pid, err
+  if project and project.launch then
+    pid, err = start_project(project, runscript)
   else
-    pid, err = spawn(rhino_exe(), args, env)
+    local root = require("rhino.build").project_root()
+    local dir
+    dir, err = package_dir(root)
+    if not dir then
+      vim.notify(err, vim.log.levels.ERROR, { title = "Rhino" })
+      return nil
+    end
+    -- Rhino loads .rhp/.gha files found under these folders (same as the Rhino.Templates launch profiles)
+    local env = { RHINO_PACKAGE_DIRS = dir }
+
+    local args = { "/netcore" }
+    if runscript then
+      table.insert(args, ('/runscript="%s"'):format(runscript))
+    end
+
+    if windows.wsl then
+      pid, err = windows.start(windows.windows_path(rhino_exe()), table.concat(args, " "), env)
+    else
+      pid, err = spawn(rhino_exe(), args, env)
+    end
   end
   if not pid then
     vim.notify("Could not start Rhino: " .. tostring(err), vim.log.levels.ERROR, { title = "Rhino" })

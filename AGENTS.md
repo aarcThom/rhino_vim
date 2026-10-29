@@ -14,6 +14,7 @@ machine-specific paths, or names of projects the plugin was used on.
 | `lua/rhino/init.lua` | Options (`setup()`), read lazily through `require("rhino").config` |
 | `lua/rhino/build.lua` | Project root (nearest `.csproj`), `dotnet build`, MSBuild errors → quickfix |
 | `lua/rhino/launch.lua` | Find Rhino.exe, stage output (WSL), start Rhino, wait for .NET Core |
+| `lua/rhino/project.lua` | `.rhino.lua`: per-project build and launch commands |
 | `lua/rhino/windows.lua` | Everything that talks to Windows, natively or from WSL |
 | `lua/rhino/dap.lua` | `rhino` adapter and the three debug configurations |
 | `lua/rhino/templates.lua` | `dotnet new` with Rhino.Templates |
@@ -71,6 +72,21 @@ Neovim, Roslyn and `dotnet build` run in Linux; Rhino and netcoredbg run on Wind
     `{HintPathFromItem}`, so a HintPath that exists still wins. `$(ReferencePath)` doesn't work for this: SDK-style
     projects leave it out of `AssemblySearchPaths`. A user-set `CustomAfterMicrosoftCommonTargets` is left alone.
 
+## Project file (`.rhino.lua`)
+
+- **Why:** the default build and launch assume one project whose `bin/<configuration>` holds the `.rhp`/`.gha`. Real
+  plug-ins break that in project-specific ways (several plug-ins, platform folders such as `bin/x64/...`, `.rhp` made by
+  a post-build step, a plug-in GUID already registered in `HKCU\...\Rhinoceros\<ver>\Plug-Ins`, which Rhino trusts
+  over `RHINO_PACKAGE_DIRS`). Rather than handle each case, a project can replace the build and launch commands, and
+  the plugin keeps the part that's generic: quickfix and attaching the debugger.
+- **Lua, not TOML or JSON:** no parser to add, and commands can be built in code. It runs commands, so it's read with
+  `vim.secure.read` (trust prompt, re-asked when the file changes).
+- **An untrusted or invalid file stops** `build`/`start` (`project.load()` returns `false`) instead of falling back to
+  the defaults, which would quietly build or load something else.
+- **Launch contract:** the command prints `pid=<Windows pid>` and exits; `M.start` then waits for `coreclr.dll` like the
+  default path. `RHINO_VIM_RUNSCRIPT` carries the `/runscript` command. `launch_timeout` bounds the wait
+  (`vim.system():wait()` returns code 124 and a signal on timeout).
+
 ## Roslyn
 
 - Uses [roslyn.nvim](https://github.com/seblyng/roslyn.nvim) with the `roslyn` package from the Crashdummyy Mason
@@ -122,9 +138,14 @@ nvim --headless --clean -u NONE -l test.lua   # test.lua: vim.opt.rtp:prepend(".
   var and `/runscript="..."` quoting arrive intact. Staging works.
 - A Linux build of the Rhino 8 templates (`net7.0-windows`, `net7.0`, `net48`) succeeds.
 - `:Rhino build`, `:Rhino new`, `:checkhealth rhino`.
+- From WSL, with a `.rhino.lua` build and launch: Rhino started by the launch command, netcoredbg attached, a
+  breakpoint set before attaching (pending until the module loads) was hit at the Linux source path, `continue`
+  resumed, and `terminate` closed Rhino.
+- Killing netcoredbg while attached (Neovim exiting mid-session, also seen right after `terminate`) leaves Rhino with
+  every thread suspended. Headless tests must keep Neovim alive until Rhino has exited.
 
 **Not yet verified:**
-- End to end: launching Rhino, netcoredbg attaching and stopping at a breakpoint, on either platform.
+- End to end with the default launch (staging + `RHINO_PACKAGE_DIRS`), and natively on Windows.
 - Native Windows since the WSL refactor (it now uses the `rhino` adapter instead of LazyVim's `netcoredbg`).
 - Rhino on macOS: not supported. Rhino.exe lookup, `tasklist` and `/netcore` are Windows-only.
 

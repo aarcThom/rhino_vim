@@ -16,6 +16,8 @@ M.defaults = {
   build_args = { "-clp:NoSummary" },
   -- Seconds to wait for Rhino to load .NET Core before giving up on attaching
   attach_timeout = 30,
+  -- Seconds to wait for a .rhino.lua `launch` command to print Rhino's pid
+  launch_timeout = 120,
   -- Path to netcoredbg, or nil to use Mason's. From WSL this must be the Windows netcoredbg.exe;
   -- the default is the Windows Neovim's Mason (%LOCALAPPDATA%\nvim-data\mason), else C:\tools\netcoredbg
   netcoredbg_exe = nil,
