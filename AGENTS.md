@@ -19,6 +19,7 @@ machine-specific paths, or names of projects the plugin was used on.
 | `lua/rhino/templates.lua` | `dotnet new` with Rhino.Templates |
 | `lua/rhino/health.lua` | `:checkhealth rhino` |
 | `plugin/rhino.lua` | The `:Rhino` command and its completion |
+| `msbuild/rhino_vim.targets` | WSL: lets MSBuild find Rhino's assemblies when a project's HintPath is a Windows path |
 
 ## Launching and debugging Rhino
 
@@ -59,9 +60,16 @@ Neovim, Roslyn and `dotnet build` run in Linux; Rhino and netcoredbg run on Wind
   Windows upper-cases document paths and matches exactly (`ModulesSources::GetFullPathIndex`). Paths that don't start
   with a drive letter also go through a suffix-matching fallback (`ResolveRelativeSourceFileName`). Stack frames report
   the original-case path, so Neovim can open them.
-- **`EnableWindowsTargeting=true`** must be set for `dotnet build` (in `build.lua`) and for Roslyn (`vim.env`, in the
-  roslyn.nvim spec's `init`). Without it, the templates' `-windows` target frameworks fail on Linux (NETSDK1100). The
-  `net48` target builds on Linux because the SDK pulls in the .NET Framework reference assemblies automatically.
+- **MSBuild environment:** `build.msbuild_env()` is used for `dotnet build`, the health check's restore and Roslyn
+  (set in `vim.env` from the roslyn.nvim spec's `config`, which runs on the first `.cs` file, not at startup).
+  MSBuild reads environment variables as properties.
+  - `EnableWindowsTargeting=true`: without it, the templates' `-windows` target frameworks fail on Linux (NETSDK1100).
+    The `net48` target builds on Linux because the SDK pulls in the .NET Framework reference assemblies automatically.
+  - `CustomAfterMicrosoftCommonTargets` → `msbuild/rhino_vim.targets`, with `RhinoVimSystemDir` set to the folder of
+    Rhino.exe. Projects often reference Rhino's own assemblies (e.g. `Rhino.Runtime.Code`) by a `C:\Program Files\...`
+    HintPath, which doesn't exist on Linux. The targets file appends the Rhino folder to `AssemblySearchPaths`, after
+    `{HintPathFromItem}`, so a HintPath that exists still wins. `$(ReferencePath)` doesn't work for this: SDK-style
+    projects leave it out of `AssemblySearchPaths`. A user-set `CustomAfterMicrosoftCommonTargets` is left alone.
 
 ## Roslyn
 

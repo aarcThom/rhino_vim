@@ -29,10 +29,7 @@ local function check_restore(root)
     vim.health.info("No .sln or .csproj under " .. root .. ", skipping the restore check")
     return
   end
-  local opts = { text = true }
-  if require("rhino.windows").wsl then
-    opts.env = { EnableWindowsTargeting = "true" }
-  end
+  local opts = { text = true, env = require("rhino.build").msbuild_env() }
   for _, target in ipairs(targets) do
     local result = vim.system({ "dotnet", "restore", target }, opts):wait()
     if result.code == 0 then

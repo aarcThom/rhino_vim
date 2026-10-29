@@ -8,6 +8,27 @@ function M.project_root()
   end) or vim.fn.getcwd()
 end
 
+-- Environment for MSBuild from WSL (dotnet build/restore and Roslyn), or nil natively.
+-- MSBuild reads environment variables as properties.
+function M.msbuild_env()
+  if not require("rhino.windows").wsl then
+    return nil
+  end
+  -- Allows building the -windows target frameworks on Linux
+  local env = { EnableWindowsTargeting = "true" }
+  -- Resolves references to Rhino's assemblies whose HintPath is a Windows path (see msbuild/rhino_vim.targets)
+  local rhino = require("rhino.launch").find_rhino()
+  local plugin = vim.fs.dirname(vim.fs.dirname(vim.fs.dirname(debug.getinfo(1, "S").source:sub(2))))
+  local targets = vim.fs.joinpath(plugin, "msbuild", "rhino_vim.targets")
+  -- Leave a CustomAfterMicrosoftCommonTargets the user set alone
+  local custom = vim.env.CustomAfterMicrosoftCommonTargets
+  if rhino and (not custom or custom == targets) then
+    env.CustomAfterMicrosoftCommonTargets = targets
+    env.RhinoVimSystemDir = vim.fs.dirname(rhino)
+  end
+  return env
+end
+
 local function command()
   local config = require("rhino").config
   return vim.list_extend({ "dotnet", "build", "-c", config.configuration }, config.build_args)
@@ -44,11 +65,7 @@ end
 ---@param on_done? fun(ok: boolean)
 function M.build(on_done)
   vim.notify("dotnet build…", vim.log.levels.INFO, { title = "Rhino" })
-  local opts = { cwd = M.project_root(), text = true }
-  if require("rhino.windows").wsl then
-    -- Allows building the -windows target frameworks on Linux
-    opts.env = { EnableWindowsTargeting = "true" }
-  end
+  local opts = { cwd = M.project_root(), text = true, env = M.msbuild_env() }
   if not on_done then
     return report(vim.system(command(), opts):wait())
   end

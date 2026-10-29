@@ -1,0 +1,11 @@
+<!--
+  Imported from WSL through CustomAfterMicrosoftCommonTargets (see lua/rhino/build.lua).
+  Projects often reference Rhino's own assemblies by a Windows HintPath (C:\Program Files\Rhino 8\System\...),
+  which doesn't exist on Linux. Searching the Rhino System folder last lets those references resolve,
+  while any HintPath that does exist still wins.
+-->
+<Project>
+  <PropertyGroup Condition="'$(RhinoVimSystemDir)' != ''">
+    <AssemblySearchPaths>$(AssemblySearchPaths);$(RhinoVimSystemDir)</AssemblySearchPaths>
+  </PropertyGroup>
+</Project>

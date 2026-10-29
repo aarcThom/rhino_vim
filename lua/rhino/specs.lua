@@ -41,11 +41,13 @@ return {
     "seblyng/roslyn.nvim",
     ft = { "cs", "razor" },
     opts = {},
-    init = function()
-      if vim.fn.has("wsl") == 1 then
-        -- Lets Roslyn's MSBuild load the -windows target frameworks on Linux
-        vim.env.EnableWindowsTargeting = "true"
+    config = function(_, opts)
+      -- The server inherits Neovim's environment, so its MSBuild sees the same properties as
+      -- `dotnet build` (set here rather than in init so finding Rhino doesn't slow down startup)
+      for name, value in pairs(require("rhino.build").msbuild_env() or {}) do
+        vim.env[name] = value
       end
+      require("roslyn").setup(opts)
     end,
   },
   {

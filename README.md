@@ -211,6 +211,9 @@ Neovim, Roslyn and `dotnet build` run in Linux; Rhino and the debugger run on Wi
 
 - `EnableWindowsTargeting=true` is set for `dotnet build` and Roslyn, so the templates' `-windows` target frameworks
   build and load on Linux.
+- References to Rhino's own assemblies by a Windows path (`<HintPath>C:\Program Files\Rhino 8\System\...`) are found
+  in the Rhino folder through `/mnt/c`: the plugin adds that folder to MSBuild's assembly search paths, for both
+  `dotnet build` and Roslyn. A HintPath that exists still takes precedence.
 - After building, `bin/<configuration>` is copied to `%LOCALAPPDATA%\Temp\rhino_vim\<project>` and
   `RHINO_PACKAGE_DIRS` points there, so Rhino loads from a Windows drive rather than over `\\wsl.localhost`. Close
   Rhino before rebuilding: Rhino locks the copied files.
