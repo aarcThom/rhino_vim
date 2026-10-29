@@ -83,6 +83,9 @@ Neovim, Roslyn and `dotnet build` run in Linux; Rhino and netcoredbg run on Wind
   `vim.secure.read` (trust prompt, re-asked when the file changes).
 - **An untrusted or invalid file stops** `build`/`start` (`project.load()` returns `false`) instead of falling back to
   the defaults, which would quietly build or load something else.
+- **`output` without `launch`:** a project whose `.csproj` isn't at the root (say `src/`) builds fine through `build`,
+  but the default launch looked for `bin/<configuration>` next to the nearest `.csproj` above the *buffer*, so a run
+  from a buffer outside `src/` staged a folder that didn't exist. `output` pins it, relative to `.rhino.lua`.
 - **Launch contract:** the command prints `pid=<Windows pid>` and exits; `M.start` then waits for `coreclr.dll` like the
   default path. `RHINO_VIM_RUNSCRIPT` carries the `/runscript` command. `launch_timeout` bounds the wait
   (`vim.system():wait()` returns code 124 and a signal on timeout).

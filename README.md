@@ -230,7 +230,8 @@ Neovim, Roslyn and `dotnet build` run in Linux; Rhino and the debugger run on Wi
 
 Some projects don't fit the default build and launch: a solution with several plug-ins, an output folder other than
 `bin/<configuration>`, `.rhp` files made in a post-build step, or setup Rhino needs before it starts. For these, put a
-`.rhino.lua` file at the project root. It replaces the build, the launch, or both; the debugger still attaches as usual.
+`.rhino.lua` file at the project root. It replaces the build, the launch, or both, or just says where the build output
+is; the debugger still attaches as usual.
 
 ```lua
 -- .rhino.lua
@@ -238,13 +239,16 @@ return {
   -- Replaces `dotnet build` of the nearest .csproj. Errors still go to the quickfix list.
   -- `dotnet build` takes one project per call, so build several through a shell:
   build = { "bash", "-c", "dotnet build src/A/A.csproj -c Debug && dotnet build src/B/B.csproj -c Debug" },
-  -- Replaces starting Rhino. The command must start Rhino (in .NET Core mode, /netcore) and print
+  -- Where the default launch finds the build output (it loads it with RHINO_PACKAGE_DIRS), relative to this file.
+  -- Replaces `bin/<configuration>` of the nearest .csproj, which depends on the buffer you're in.
+  output = "src/bin/Debug",
+  -- Replaces starting Rhino (`output` is then unused). The command must start Rhino (in .NET Core mode, /netcore) and print
   -- `pid=<Windows pid>`, then exit; Neovim attaches the debugger to that pid.
   launch = { "./scripts/start-rhino.sh" },
 }
 ```
 
-- Both are lists of strings, run from the folder containing `.rhino.lua`. The nearest `.rhino.lua` above the current
+- `build` and `launch` are lists of strings, run from the folder containing `.rhino.lua`. The nearest `.rhino.lua` above the current
   buffer is used, else the one above the working directory.
 - For `:Rhino grasshopper`, the launch command gets `RHINO_VIM_RUNSCRIPT=_Grasshopper` in its environment; pass it to
   Rhino as `/runscript="_Grasshopper"`.
@@ -252,7 +256,9 @@ return {
   debugged. It has `launch_timeout` seconds.
 - The file runs commands, so Neovim asks whether to trust it the first time, and again whenever it changes (the same
   mechanism as `'exrc'`). If you answer no, `:Rhino build` and `:Rhino launch` stop rather than use the defaults; allow
-  it later with `:trust .rhino.lua`.
+  it later with `:trust .rhino.lua`. Running `:trust` in the file's own buffer hashes the buffer as it would be
+  written: if an EditorConfig `end_of_line` changed its line endings on opening, the hash won't match the file on
+  disk and the trust won't stick. Save the buffer first, or trust the file by path from another buffer.
 - `:checkhealth rhino` shows which `.rhino.lua` applies.
 
 ## Troubleshooting

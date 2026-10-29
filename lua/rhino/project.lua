@@ -9,6 +9,7 @@ M.filename = ".rhino.lua"
 ---@field path string
 ---@field build? string[] Replaces `dotnet build` of the nearest .csproj
 ---@field launch? string[] Replaces starting Rhino; must print `pid=<Windows pid>` and exit
+---@field output? string Build output folder (relative to `root`) for RHINO_PACKAGE_DIRS; replaces `bin/<configuration>` of the nearest .csproj
 
 -- Nearest .rhino.lua above the current buffer, else above the working directory
 function M.find()
@@ -69,6 +70,10 @@ function M.load()
       vim.notify(msg, vim.log.levels.ERROR, { title = "Rhino" })
       return false
     end
+  end
+  if project.output ~= nil and (type(project.output) ~= "string" or project.output == "") then
+    vim.notify(("%s: `output` must be a folder path"):format(path), vim.log.levels.ERROR, { title = "Rhino" })
+    return false
   end
   project.root = vim.fs.dirname(path)
   project.path = path

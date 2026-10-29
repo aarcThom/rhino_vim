@@ -35,9 +35,12 @@ function M.stage_dir(root)
   return vim.fs.joinpath(windows.localappdata(), "Temp", "rhino_vim", vim.fs.basename(root))
 end
 
--- Folder for RHINO_PACKAGE_DIRS (as a Windows path), or nil and an error
-local function package_dir(root)
-  local output = vim.fs.joinpath(root, "bin", require("rhino").config.configuration)
+-- Folder for RHINO_PACKAGE_DIRS (as a Windows path), or nil and an error. `output` is the build output;
+-- `root` names the staging folder.
+local function package_dir(root, output)
+  if not vim.uv.fs_stat(output) then
+    return nil, "No build output at " .. output .. " (set `output` in " .. require("rhino.project").filename .. ")"
+  end
   if not windows.wsl then
     return output
   end
@@ -105,9 +108,17 @@ function M.start(runscript)
   if project and project.launch then
     pid, err = start_project(project, runscript)
   else
-    local root = require("rhino.build").project_root()
+    -- The project file's `output`, else bin/<configuration> of the nearest .csproj
+    local root, output
+    if project and project.output then
+      root = project.root
+      output = vim.fs.normalize(vim.fs.joinpath(root, project.output))
+    else
+      root = require("rhino.build").project_root()
+      output = vim.fs.joinpath(root, "bin", require("rhino").config.configuration)
+    end
     local dir
-    dir, err = package_dir(root)
+    dir, err = package_dir(root, output)
     if not dir then
       vim.notify(err, vim.log.levels.ERROR, { title = "Rhino" })
       return nil
