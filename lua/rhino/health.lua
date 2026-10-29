@@ -10,6 +10,52 @@ local function check_executable(name, advice)
   return false
 end
 
+-- Solutions under `root`, else its projects: what Roslyn loads
+local function restore_targets(root)
+  local function find(pattern)
+    return vim.fs.find(function(name)
+      return name:match(pattern) ~= nil
+    end, { path = root, type = "file", limit = 20 })
+  end
+  local slns = vim.list_extend(find("%.sln$"), find("%.slnx$"))
+  return #slns > 0 and slns or find("%.csproj$")
+end
+
+-- A failed restore stops Roslyn loading the project (no hover, completion or go to definition)
+-- as well as `dotnet build`, and otherwise only shows up in :LspLog
+local function check_restore(root)
+  local targets = restore_targets(root)
+  if #targets == 0 then
+    vim.health.info("No .sln or .csproj under " .. root .. ", skipping the restore check")
+    return
+  end
+  local opts = { text = true }
+  if require("rhino.windows").wsl then
+    opts.env = { EnableWindowsTargeting = "true" }
+  end
+  for _, target in ipairs(targets) do
+    local result = vim.system({ "dotnet", "restore", target }, opts):wait()
+    if result.code == 0 then
+      vim.health.ok("Restored " .. target)
+    else
+      -- `path.csproj : error NU1605: ...`, once per error rather than with every detail line
+      local errors, seen = {}, {}
+      for line in (result.stdout .. result.stderr):gmatch("[^\n]+") do
+        local msg = line:match(": (error %u+%d+: .*)$")
+        if msg and not seen[msg] then
+          seen[msg] = true
+          errors[#errors + 1] = vim.trim(msg)
+        end
+      end
+      vim.health.error(
+        ("dotnet restore failed for %s\n%s"):format(target, table.concat(errors, "\n")),
+        "Roslyn can't load a project that doesn't restore. Fix the errors, then restart the Roslyn daemon: "
+          .. "pkill -f Microsoft.CodeAnalysis.LanguageServer"
+      )
+    end
+  end
+end
+
 function M.check()
   vim.health.start("rhino.nvim")
 
@@ -40,6 +86,10 @@ function M.check()
         "No installed .NET SDK matches the global.json for " .. root,
         "Install the SDK version global.json asks for, then restart the Roslyn daemon (see the README)"
       )
+    end
+
+    if sdk.code == 0 then
+      check_restore(root)
     end
 
     local list = vim.system({ "dotnet", "new", "list", "rhino" }, { text = true }):wait()

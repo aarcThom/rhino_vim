@@ -71,6 +71,10 @@ Neovim, Roslyn and `dotnet build` run in Linux; Rhino and netcoredbg run on Wind
   daemon started before an SDK install or PATH change keeps the old environment. Symptom: `Error while loading
   ....csproj` with `hostfxr_resolve_sdk2` / "Requested SDK version" in `:LspLog`, and no completions from package
   references. Fix: `pkill -f Microsoft.CodeAnalysis.LanguageServer`. `:Roslyn restart` alone just reconnects.
+- **A project that fails `dotnet restore` isn't loaded.** Its files fall back to a syntax-only workspace: parse errors
+  still show, but hover, signature help and completion return nothing. The error is only in `:LspLog`
+  (`Error while loading ....csproj`), so `:checkhealth rhino` restores the solutions (else projects) under the cwd to
+  surface it. A NuGet package downgrade (NU1605, an error by default) is a common cause.
 - **`global.json` pins** with `rollForward: latestFeature` don't accept an older feature band (10.0.1xx doesn't satisfy
   10.0.301). Some Linux distros only package the 1xx band. `:checkhealth rhino` runs `dotnet --version` in the project
   to catch this.
@@ -97,6 +101,9 @@ nvim --headless --clean -u NONE -l test.lua   # test.lua: vim.opt.rtp:prepend(".
   feed fake MSBuild output to `build.lua`.
 - To test the WSL → Windows start path without opening Rhino, call `windows.start()` on a hidden `cmd.exe /c echo ... >
   file` and check the echoed environment and arguments.
+- In a LazyVim install, lazy.nvim loads its own clone (`~/.local/share/nvim/lazy/rhino_vim`), and its module cache
+  wins over an `rtp:prepend` of the checkout. To run `:checkhealth rhino` against the checkout, use
+  `nvim --headless --clean --cmd "set rtp^=<checkout>" "+checkhealth rhino" "+w! out.txt" +qa`.
 - To test the spec, point lazy.nvim's `dev.path` at the checkout and use `{ "aarcThom/rhino_vim", dev = true, import =
   "rhino.specs" }`.
 

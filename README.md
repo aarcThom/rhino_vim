@@ -137,7 +137,8 @@ options are only read at startup, so a Neovim that was already open keeps lookin
 ```
 
 This checks Neovim, the platform (Windows / WSL), `dotnet`, the templates, Rhino.exe and netcoredbg, and tells you how
-to fix anything missing.
+to fix anything missing. It also runs `dotnet restore` on the solutions (or projects) under the working directory: a
+project that doesn't restore can't be loaded by Roslyn, so `K`, completion and go to definition stop working for it.
 
 WSL: if netcoredbg.exe is reported missing even though step 7 put it in place, Neovim probably hasn't been restarted
 since. Quit it, start it again and rerun the check.
