@@ -4,49 +4,34 @@ A [LazyVim](https://lazyvim.github.io) plugin for developing RhinoCommon / Grass
 server, `dotnet build` with errors in the quickfix list, Rhino.Templates project creation, and build, launch and debug
 Rhino / Grasshopper with your plug-in loaded.
 
-Works with Neovim running on Windows, or in WSL with Rhino launched and debugged on the Windows side.
+Windows only: Neovim, `dotnet`, Rhino and the debugger all run natively on Windows.
 
 ## Requirements
 
-- Neovim 0.11+ and LazyVim, on Windows or in WSL
-- The [.NET SDK](https://dotnet.microsoft.com/download) where Neovim runs (`winget install Microsoft.DotNet.SDK.10` on
-  Windows, your distro's `dotnet-sdk` package in WSL)
-- Rhino 8 or newer on Windows, running in .NET Core mode (the default in Rhino 8)
+- Windows, with Neovim 0.11+ and LazyVim
+- The [.NET SDK](https://dotnet.microsoft.com/download) (`winget install Microsoft.DotNet.SDK.10`)
+- Rhino 8 or newer, running in .NET Core mode (the default in Rhino 8)
 - The LazyVim extras `lang.dotnet` and `dap.core` — enable them with `:LazyExtras`
-- WSL only: the **Windows** build of netcoredbg. The plugin finds it in a Windows Neovim's Mason
-  (`%LOCALAPPDATA%\nvim-data\mason`) or in `C:\tools\netcoredbg\`; anywhere else, set `netcoredbg_exe`
 
 ## Installation
 
-### 1. Install Rhino (Windows)
+### 1. Install Rhino
 
-Install Rhino 8 or newer on Windows. Leave it in .NET Core mode, the default in Rhino 8. To check, run `SetDotNetRuntime`
-in Rhino; it should say `NETCore`.
+Install Rhino 8 or newer. Leave it in .NET Core mode, the default in Rhino 8. To check, run `SetDotNetRuntime` in Rhino;
+it should say `NETCore`.
 
 ### 2. Install Neovim and LazyVim
 
-Where you'll edit code (Windows or WSL), install Neovim 0.11+ and LazyVim by following the
-[LazyVim installation guide](https://lazyvim.github.io/installation). That guide also lists LazyVim's own requirements
-(git, a C compiler, ripgrep, fd).
+Install Neovim 0.11+ and LazyVim by following the [LazyVim installation guide](https://lazyvim.github.io/installation).
+That guide also lists LazyVim's own requirements (git, a C compiler, ripgrep, fd).
 
 ### 3. Install the .NET SDK
 
-The SDK goes where Neovim runs. It provides `dotnet build`, the project templates and the runtime for the Roslyn
-language server.
+It provides `dotnet build`, the project templates and the runtime for the Roslyn language server.
 
-- **Windows:**
-
-  ```powershell
-  winget install Microsoft.DotNet.SDK.10
-  ```
-
-- **WSL:** use your distro's package (`sudo apt install dotnet-sdk-10.0` on Ubuntu, `sudo dnf install dotnet-sdk-10.0`
-  on Fedora). If your distro doesn't package it, use Microsoft's install script:
-
-  ```bash
-  curl -sSL https://dot.net/v1/dotnet-install.sh | bash -s -- --channel 10.0
-  echo 'export DOTNET_ROOT=$HOME/.dotnet; export PATH=$PATH:$DOTNET_ROOT:$DOTNET_ROOT/tools' >> ~/.bashrc
-  ```
+```powershell
+winget install Microsoft.DotNet.SDK.10
+```
 
 Check it with `dotnet --version` in a new terminal.
 
@@ -59,7 +44,7 @@ Open Neovim, run `:LazyExtras`, and enable these two with `x`:
 
 ### 5. Add the plugin
 
-Create `lua/plugins/rhino.lua` in your Neovim config (`~/.config/nvim` in WSL, `%LOCALAPPDATA%\nvim` on Windows):
+Create `lua/plugins/rhino.lua` in your Neovim config (`%LOCALAPPDATA%\nvim`):
 
 ```lua
 return {
@@ -80,70 +65,17 @@ and adds the Rhino debug configurations to nvim-dap.
 
 This runs `dotnet new install Rhino.Templates`.
 
-### 7. WSL only: get the Windows netcoredbg
-
-*Skip this step if Neovim runs on Windows.*
-
-**Why:** netcoredbg is the debugger. It has to run on the same OS as the program it debugs, so when Rhino runs on
-Windows it has to be `netcoredbg.exe`, the Windows build. The netcoredbg that Mason installed in step 5 is the Linux
-build: it's fine for Linux .NET programs but can't attach to Rhino. The plugin runs `netcoredbg.exe` from WSL for you;
-you only need to have it on the Windows drive.
-
-**a. Check whether you already have it.** If you also use LazyVim on Windows with the `lang.dotnet` extra, its Mason
-has already installed it. Run this in WSL:
-
-```bash
-ls /mnt/c/Users/*/AppData/Local/nvim-data/mason/packages/netcoredbg/netcoredbg/netcoredbg.exe
-```
-
-If that prints a path, you're done: the plugin looks there by default. Go to step 8.
-
-**b. Otherwise, download it.** Run this in WSL; it puts the debugger in `C:\tools\netcoredbg\`:
-
-```bash
-mkdir -p /mnt/c/tools
-curl -L -o /tmp/netcoredbg-win64.zip https://github.com/Samsung/netcoredbg/releases/latest/download/netcoredbg-win64.zip
-unzip -o /tmp/netcoredbg-win64.zip -d /mnt/c/tools   # the zip contains a netcoredbg\ folder
-ls /mnt/c/tools/netcoredbg/netcoredbg.exe            # should print the path
-```
-
-(Or by hand: download `netcoredbg-win64.zip` from
-[netcoredbg releases](https://github.com/Samsung/netcoredbg/releases) and extract it to `C:\tools`.)
-
-The plugin also looks in `C:\tools\netcoredbg\`, so there's nothing to configure. If Neovim was open, quit it and
-start it again before step 8.
-
-**c. Somewhere else?** If you put `netcoredbg.exe` in another folder, edit `~/.config/nvim/lua/plugins/rhino.lua` from
-step 5 so it reads:
-
-```lua
-return {
-  {
-    "aarcThom/rhino_vim",
-    import = "rhino.specs",
-    opts = { netcoredbg_exe = "D:/somewhere/netcoredbg/netcoredbg.exe" },
-  },
-}
-```
-
-Either a Windows path (`D:/...`) or the WSL path (`/mnt/d/...`) works. Then quit Neovim and start it again: plugin
-options are only read at startup, so a Neovim that was already open keeps looking in the default places and
-`:checkhealth rhino` will report netcoredbg.exe as missing.
-
-### 8. Check the setup
+### 7. Check the setup
 
 ```vim
 :checkhealth rhino
 ```
 
-This checks Neovim, the platform (Windows / WSL), `dotnet`, the templates, Rhino.exe and netcoredbg, and tells you how
-to fix anything missing. It also runs `dotnet restore` on the solutions (or projects) under the working directory: a
-project that doesn't restore can't be loaded by Roslyn, so `K`, completion and go to definition stop working for it.
+This checks Neovim, `dotnet`, the templates, Rhino.exe and netcoredbg, and tells you how to fix anything missing. It
+also runs `dotnet restore` on the solutions (or projects) under the working directory: a project that doesn't restore
+can't be loaded by Roslyn, so `K`, completion and go to definition stop working for it.
 
-WSL: if netcoredbg.exe is reported missing even though step 7 put it in place, Neovim probably hasn't been restarted
-since. Quit it, start it again and rerun the check.
-
-### 9. Try it
+### 8. Try it
 
 ```vim
 :Rhino new grasshopper MyComponents   " creates ./MyComponents and :cd's into it
@@ -163,15 +95,14 @@ return {
   {
     "aarcThom/rhino_vim",
     opts = {
-      rhino_exe = nil, -- path to Rhino.exe, Windows or WSL style (or a function returning one); nil = newest of rhino_versions
+      rhino_exe = nil, -- path to Rhino.exe (or a function returning one); nil = newest of rhino_versions
       rhino_versions = { 9, 8 }, -- looked up in C:/Program Files/Rhino <n>/System/Rhino.exe
       template_version = 8, -- `dotnet new rhino/grasshopper --version`
       configuration = "Debug", -- build configuration; Rhino loads plug-ins from bin/<configuration>
       build_args = { "-clp:NoSummary" },
       attach_timeout = 30, -- seconds to wait for Rhino to load .NET Core
       launch_timeout = 120, -- seconds to wait for a .rhino.lua `launch` command to print Rhino's pid
-      netcoredbg_exe = nil, -- nil = Mason's; from WSL, the Windows Neovim's Mason or C:/tools/netcoredbg
-      wsl_stage_dir = nil, -- WSL: Windows folder for the build output; nil = %LOCALAPPDATA%\Temp\rhino_vim
+      netcoredbg_exe = nil, -- path to netcoredbg.exe; nil = Mason's
     },
   },
 }
@@ -206,26 +137,6 @@ Formatting (csharpier, `<leader>cf` and on save) comes from the `lang.dotnet` ex
 - The `coreclr` adapter is aliased to netcoredbg so the templates' own `launch.json` entries work too.
 - The Roslyn server keeps running after Neovim exits (`--daemon`) and is reused by the next session.
 
-### From WSL
-
-Neovim, Roslyn and `dotnet build` run in Linux; Rhino and the debugger run on Windows.
-
-- `EnableWindowsTargeting=true` is set for `dotnet build` and Roslyn, so the templates' `-windows` target frameworks
-  build and load on Linux.
-- References to Rhino's own assemblies by a Windows path (`<HintPath>C:\Program Files\Rhino 8\System\...`) are found
-  in the Rhino folder through `/mnt/c`: the plugin adds that folder to MSBuild's assembly search paths, for both
-  `dotnet build` and Roslyn. A HintPath that exists still takes precedence.
-- After building, `bin/<configuration>` is copied to `%LOCALAPPDATA%\Temp\rhino_vim\<project>` and
-  `RHINO_PACKAGE_DIRS` points there, so Rhino loads from a Windows drive rather than over `\\wsl.localhost`. Close
-  Rhino before rebuilding: Rhino locks the copied files.
-- Rhino is started through PowerShell's `Start-Process` (Windows tools are called by full path, so the Windows `PATH`
-  doesn't need to be shared with WSL). This gives the Windows pid netcoredbg needs to attach to.
-- The debug configurations use their own `rhino` adapter, the Windows `netcoredbg.exe` talking over stdio, so the
-  `netcoredbg` adapter from `lang.dotnet` stays free for Linux .NET programs.
-- Breakpoints work without any path mapping: the PDBs record the Linux source paths (`/home/...`), and netcoredbg
-  matches the paths Neovim sends against them.
-- The templates' `.vscode/launch.json` entries (`coreclr`) don't work from WSL; use the `Rhino:` configurations.
-
 ## Custom build and launch (`.rhino.lua`)
 
 Some projects don't fit the default build and launch: a solution with several plug-ins, an output folder other than
@@ -238,13 +149,13 @@ is; the debugger still attaches as usual.
 return {
   -- Replaces `dotnet build` of the nearest .csproj. Errors still go to the quickfix list.
   -- `dotnet build` takes one project per call, so build several through a shell:
-  build = { "bash", "-c", "dotnet build src/A/A.csproj -c Debug && dotnet build src/B/B.csproj -c Debug" },
+  build = { "cmd", "/c", "dotnet build src/A/A.csproj -c Debug && dotnet build src/B/B.csproj -c Debug" },
   -- Where the default launch finds the build output (it loads it with RHINO_PACKAGE_DIRS), relative to this file.
   -- Replaces `bin/<configuration>` of the nearest .csproj, which depends on the buffer you're in.
   output = "src/bin/Debug",
   -- Replaces starting Rhino (`output` is then unused). The command must start Rhino (in .NET Core mode, /netcore) and print
-  -- `pid=<Windows pid>`, then exit; Neovim attaches the debugger to that pid.
-  launch = { "./scripts/start-rhino.sh" },
+  -- `pid=<pid>`, then exit; Neovim attaches the debugger to that pid.
+  launch = { "pwsh", "-NoProfile", "-File", "scripts/start-rhino.ps1" },
 }
 ```
 
@@ -276,14 +187,13 @@ treats each file on its own. Open a `.cs` file, wait for the loading notificatio
 `Error while loading ....csproj`. Common causes:
 
 - **Missing SDK:** your `global.json` asks for an SDK you don't have (`:checkhealth rhino` reports this). Install that
-  version. On Fedora, dnf only ships the 10.0.1xx SDKs, so use
-  [dotnet-install.sh](https://learn.microsoft.com/dotnet/core/tools/dotnet-install-script) for a newer feature band.
+  version.
 - **Stale Roslyn daemon:** Roslyn keeps one shared server running for 15 minutes after Neovim exits, and the next Neovim
   reconnects to it. If that server started before you installed or changed an SDK, it keeps the old environment. Stop
   it, then reopen Neovim:
 
-  ```bash
-  pkill -f Microsoft.CodeAnalysis.LanguageServer
+  ```powershell
+  Stop-Process -Name Microsoft.CodeAnalysis.LanguageServer
   ```
 
 ## Developing this plugin

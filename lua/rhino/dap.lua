@@ -1,6 +1,4 @@
 -- Debug configurations for RhinoCommon / Grasshopper plug-ins (netcoredbg via nvim-dap)
-local windows = require("rhino.windows")
-
 local M = {}
 
 -- Returns a processId function that builds, starts Rhino and returns its pid for netcoredbg to attach to
@@ -17,7 +15,7 @@ end
 -- Runs inside nvim-dap's coroutine, so it can wait for vim.ui.select
 local function pick_rhino()
   local dap = require("dap")
-  local pids = windows.rhino_pids()
+  local pids = require("rhino.launch").rhino_pids()
   if #pids <= 1 then
     if #pids == 0 then
       vim.notify("Rhino isn't running", vim.log.levels.WARN, { title = "Rhino" })
@@ -38,8 +36,8 @@ local function pick_rhino()
   return coroutine.yield()
 end
 
--- Configurations use their own `rhino` adapter: from WSL it's the Windows netcoredbg.exe,
--- while the Linux `netcoredbg` adapter stays available for Linux .NET apps
+-- Configurations use their own `rhino` adapter, so they don't depend on how (or whether) lang.dotnet
+-- has set up its `netcoredbg` one
 M.configurations = {
   launch = {
     type = "rhino",
@@ -61,34 +59,29 @@ M.configurations = {
   },
 }
 
--- Path to the netcoredbg Rhino is debugged with
+-- Path to netcoredbg.exe: the configured one, else Mason's (the exe itself rather than Mason's .cmd shim,
+-- so ending the session stops netcoredbg and not just a cmd.exe wrapper), else from PATH
 function M.netcoredbg()
   local exe = require("rhino").config.netcoredbg_exe
   if exe then
-    return windows.local_path(exe)
+    return exe
   end
-  if windows.wsl then
-    -- A Windows Neovim's Mason install, else where the README's download puts it
-    local mason =
-      vim.fs.joinpath(windows.localappdata(), "nvim-data/mason/packages/netcoredbg/netcoredbg/netcoredbg.exe")
-    local tools = windows.local_path("C:/tools/netcoredbg/netcoredbg.exe")
-    return vim.fn.executable(mason) == 0 and vim.fn.executable(tools) == 1 and tools or mason
+  local mason = vim.fs.joinpath(vim.fn.stdpath("data"), "mason/packages/netcoredbg/netcoredbg/netcoredbg.exe")
+  if vim.uv.fs_stat(mason) then
+    return mason
   end
-  exe = vim.fn.exepath("netcoredbg")
-  return exe ~= "" and exe or vim.fs.joinpath(vim.fn.stdpath("data"), "mason/bin/netcoredbg")
+  return vim.fn.exepath("netcoredbg")
 end
 
 -- Adds the Rhino configurations to nvim-dap (safe to call more than once)
 function M.setup()
   local dap = require("dap")
-  -- Resolved when a session starts, so finding the Windows netcoredbg doesn't slow down startup
+  -- Resolved when a session starts, so a netcoredbg Mason installs after startup is found
   dap.adapters.rhino = function(callback)
     callback({ type = "executable", command = M.netcoredbg(), args = { "--interpreter=vscode" } })
   end
-  if not windows.wsl then
-    -- `coreclr` is the adapter name used by the templates' .vscode/launch.json
-    dap.adapters.coreclr = dap.adapters.coreclr or dap.adapters.netcoredbg or dap.adapters.rhino
-  end
+  -- `coreclr` is the adapter name used by the templates' .vscode/launch.json
+  dap.adapters.coreclr = dap.adapters.coreclr or dap.adapters.netcoredbg or dap.adapters.rhino
 
   dap.configurations.cs = dap.configurations.cs or {}
   for _, name in ipairs({ "launch", "grasshopper", "attach" }) do

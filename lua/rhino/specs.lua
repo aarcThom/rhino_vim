@@ -41,14 +41,6 @@ return {
     "seblyng/roslyn.nvim",
     ft = { "cs", "razor" },
     opts = {},
-    config = function(_, opts)
-      -- The server inherits Neovim's environment, so its MSBuild sees the same properties as
-      -- `dotnet build` (set here rather than in init so finding Rhino doesn't slow down startup)
-      for name, value in pairs(require("rhino.build").msbuild_env() or {}) do
-        vim.env[name] = value
-      end
-      require("roslyn").setup(opts)
-    end,
   },
   {
     "neovim/nvim-lspconfig",

@@ -3,7 +3,7 @@ local M = {}
 
 ---@class rhino.Config
 M.defaults = {
-  -- Path to Rhino.exe (Windows or WSL path), a function returning one, or nil to use the newest of `rhino_versions`
+  -- Path to Rhino.exe, a function returning one, or nil to use the newest of `rhino_versions`
   ---@type string|fun():string|nil
   rhino_exe = nil,
   -- Installed Rhino versions to look for, newest first
@@ -18,11 +18,8 @@ M.defaults = {
   attach_timeout = 30,
   -- Seconds to wait for a .rhino.lua `launch` command to print Rhino's pid
   launch_timeout = 120,
-  -- Path to netcoredbg, or nil to use Mason's. From WSL this must be the Windows netcoredbg.exe;
-  -- the default is the Windows Neovim's Mason (%LOCALAPPDATA%\nvim-data\mason), else C:\tools\netcoredbg
+  -- Path to netcoredbg.exe, or nil to use Mason's
   netcoredbg_exe = nil,
-  -- WSL only: Windows folder the build output is copied to for Rhino to load, or nil for %LOCALAPPDATA%\Temp\rhino_vim
-  wsl_stage_dir = nil,
 }
 
 ---@type rhino.Config

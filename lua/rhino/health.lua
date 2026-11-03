@@ -29,7 +29,7 @@ local function check_restore(root)
     vim.health.info("No .sln or .csproj under " .. root .. ", skipping the restore check")
     return
   end
-  local opts = { text = true, env = require("rhino.build").msbuild_env() }
+  local opts = { text = true }
   for _, target in ipairs(targets) do
     local result = vim.system({ "dotnet", "restore", target }, opts):wait()
     if result.code == 0 then
@@ -46,8 +46,8 @@ local function check_restore(root)
       end
       vim.health.error(
         ("dotnet restore failed for %s\n%s"):format(target, table.concat(errors, "\n")),
-        "Roslyn can't load a project that doesn't restore. Fix the errors, then restart the Roslyn daemon: "
-          .. "pkill -f Microsoft.CodeAnalysis.LanguageServer"
+        "Roslyn can't load a project that doesn't restore. Fix the errors, then restart the Roslyn daemon "
+          .. "(see Troubleshooting in the README)"
       )
     end
   end
@@ -62,14 +62,10 @@ function M.check()
     vim.health.error("Neovim 0.11+ is required (roslyn.nvim)")
   end
 
-  local windows = require("rhino.windows")
-  if windows.wsl then
-    vim.health.ok("WSL: building in Linux, launching and debugging Rhino on Windows")
-    vim.health.info("Build output is copied to " .. require("rhino.launch").stage_dir("<project>"))
-  elseif vim.fn.has("win32") == 1 then
+  if vim.fn.has("win32") == 1 then
     vim.health.ok("Windows")
   else
-    vim.health.warn("Launching and debugging Rhino only works on Windows or WSL")
+    vim.health.error("rhino_vim needs Neovim running on Windows, where Rhino runs")
   end
 
   local project = require("rhino.project").find()
@@ -117,11 +113,6 @@ function M.check()
   local netcoredbg = require("rhino.dap").netcoredbg()
   if vim.fn.executable(netcoredbg) == 1 then
     vim.health.ok("netcoredbg: " .. netcoredbg)
-  elseif windows.wsl then
-    vim.health.error(
-      "Windows netcoredbg.exe not found: " .. netcoredbg,
-      "Extract netcoredbg-win64.zip to C:\\tools (see the README), or set `netcoredbg_exe`, then restart Neovim"
-    )
   else
     vim.health.error("netcoredbg not found", "Run :MasonInstall netcoredbg")
   end
