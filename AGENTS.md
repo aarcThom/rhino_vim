@@ -31,6 +31,9 @@ support` if it's ever wanted again (staging the build output, PowerShell `Start-
 
 - **Spawn Rhino, then attach.** Don't use a netcoredbg `launch` request. netcoredbg re-quotes arguments, and Rhino only
   accepts `/runscript="_Grasshopper"` with the quotes intact. `vim.uv.spawn` with `verbatim = true` keeps them.
+- **`verbatim` leaves argv[0] unquoted too.** Rhino reads `C:/Program Files/Rhino 8/System/Rhino.exe /netcore` as
+  documents to open and shows "File type not supported ... Files/Rhino". So a Rhino path with a space is spawned by its
+  bare file name with `cwd` set to its folder: libuv resolves the name in `cwd` first.
 - **Wait for `coreclr.dll`** before attaching (`tasklist /m coreclr.dll /fi "PID eq <pid>"`). netcoredbg can't attach
   until the runtime is loaded, about a second after start.
 - **`/netcore` is required.** netcoredbg can't debug the .NET Framework runtime.

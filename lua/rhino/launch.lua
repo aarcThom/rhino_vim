@@ -43,6 +43,9 @@ function M.rhino_pids()
 end
 
 -- Spawns Rhino with `env` added to Neovim's environment. `verbatim` keeps /runscript="..." quoted as given.
+-- It also stops libuv quoting argv[0], and Rhino reads an unquoted "C:/Program Files/..." as a file to open
+-- ("File type not supported ... Files/Rhino"). So Rhino is started by its bare file name from its own folder:
+-- libuv looks the name up in `cwd` first, and argv[0] has no space left to split on.
 local function spawn(exe, args, env)
   -- uv.spawn's `env` replaces the whole environment
   local env_list = {}
@@ -54,7 +57,12 @@ local function spawn(exe, args, env)
   end
 
   local handle, pid
-  handle, pid = vim.uv.spawn(exe, { args = args, env = env_list, verbatim = true }, function()
+  local opts = { args = args, env = env_list, verbatim = true }
+  if exe:find(" ", 1, true) then
+    opts.cwd = vim.fs.dirname(exe)
+    exe = vim.fs.basename(exe)
+  end
+  handle, pid = vim.uv.spawn(exe, opts, function()
     handle:close()
   end)
   if not handle then
