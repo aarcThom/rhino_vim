@@ -17,6 +17,12 @@ local subcommands = {
   attach = function()
     require("rhino.dap").run("attach")
   end,
+  project = function()
+    local dir = require("rhino.build").pick_project()
+    if dir then
+      vim.notify("Builds and launches " .. dir, vim.log.levels.INFO, { title = "Rhino" })
+    end
+  end,
   new = function(args)
     require("rhino.templates").new(args[1], args[2])
   end,

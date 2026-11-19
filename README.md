@@ -113,10 +113,23 @@ return {
 | Command | Key | What it does |
 |---|---|---|
 | `:Rhino new [template] [name]` | `<leader>Rn` | `dotnet new` from Rhino.Templates. `rhino` / `grasshopper` create a project in the working directory and `:cd` into it; `rhinocommand` / `ghcomponent` add to the current project |
-| `:Rhino build` | `<leader>Rb` | `dotnet build` the nearest `.csproj`; errors and warnings go to the quickfix list |
+| `:Rhino build` | `<leader>Rb` | `dotnet build` the plug-in project (see below); errors and warnings go to the quickfix list |
 | `:Rhino launch` | `<leader>Rl` | Build, start Rhino with your plug-in loaded and attach the debugger |
 | `:Rhino grasshopper` | `<leader>Rg` | Same, and open Grasshopper so your `.gha` loads |
 | `:Rhino attach` | `<leader>Ra` | Attach the debugger to an already running Rhino |
+| `:Rhino project` | `<leader>Rp` | Pick which plug-in project of the working tree to build and launch |
+
+### Which project is built and launched
+
+Build and launch use the Rhino plug-in project of the working tree (the git checkout of the current buffer, else of
+the working directory), whichever file you're editing. In a solution the buffer is often in a library, and building
+only that would leave Rhino loading an old plug-in.
+
+- A plug-in project is a `.csproj` with `<TargetExt>` `.rhp` or `.gha`, or whose `bin` folder already has a `.rhp` or
+  `.gha` (plug-ins that make it in a post-build step).
+- One plug-in project: it's used. Several: the first build or launch asks which, and remembers it for that working tree
+  (`:Rhino project` changes it). None: the nearest `.csproj` above the buffer, as before.
+- A `.rhino.lua` (below) overrides all of this.
 
 The debug configurations also appear in nvim-dap's picker (`<leader>dc`) as `Rhino: build & launch`,
 `Rhino: build & launch Grasshopper` and `Rhino: attach to running Rhino`. Use these rather than the `Rhino 8 - netcore`
@@ -127,7 +140,7 @@ Formatting (csharpier, `<leader>cf` and on save) comes from the `lang.dotnet` ex
 
 ## How launching works
 
-- Rhino is started with `/netcore` and `RHINO_PACKAGE_DIRS=<project>/bin/<configuration>`, which is how the
+- Rhino is started with `/netcore` and `RHINO_PACKAGE_DIRS=<plug-in project>/bin/<configuration>`, which is how the
   Rhino.Templates launch profiles make Rhino load the plug-in you just built.
 - Rhino is spawned by Neovim and netcoredbg then attaches to it, rather than using a netcoredbg `launch`: netcoredbg
   re-quotes arguments, and Rhino only accepts `/runscript="_Grasshopper"` with the quotes intact.

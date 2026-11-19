@@ -31,7 +31,7 @@ local function create(template, name)
     cwd = vim.fn.getcwd()
   else
     -- Items go into the project the current buffer belongs to
-    cwd = require("rhino.build").project_root()
+    cwd = require("rhino.build").buffer_project()
   end
 
   local result = vim.system(cmd, { cwd = cwd, text = true }):wait()

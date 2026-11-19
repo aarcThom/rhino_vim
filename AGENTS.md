@@ -19,7 +19,7 @@ support` if it's ever wanted again (staging the build output, PowerShell `Start-
 |---|---|
 | `lua/rhino/specs.lua` | lazy.nvim specs for LazyVim (`import = "rhino.specs"`): Roslyn, Mason registry, keys, dap hook |
 | `lua/rhino/init.lua` | Options (`setup()`), read lazily through `require("rhino").config` |
-| `lua/rhino/build.lua` | Project root (nearest `.csproj`), `dotnet build`, MSBuild errors → quickfix |
+| `lua/rhino/build.lua` | Which project to build (plug-in project of the working tree), `dotnet build`, MSBuild errors → quickfix |
 | `lua/rhino/launch.lua` | Find Rhino.exe, start Rhino, wait for .NET Core, list Rhino processes (`tasklist`) |
 | `lua/rhino/project.lua` | `.rhino.lua`: per-project build and launch commands |
 | `lua/rhino/dap.lua` | `rhino` adapter and the three debug configurations |
@@ -49,6 +49,20 @@ support` if it's ever wanted again (staging the build output, PowerShell `Start-
 - **The `coreclr` alias** is what the templates' `.vscode/launch.json` uses.
 - After `terminate`, Rhino closes and nvim-dap reports netcoredbg `exited with 1`. That's netcoredbg losing its
   debuggee, not a failure.
+
+## Which project is built and launched
+
+- **Not the buffer's project.** The default used to be the nearest `.csproj` above the buffer. In a solution that's
+  often a library: it got built, `RHINO_PACKAGE_DIRS` pointed at the library's `bin`, and Rhino loaded the plug-in from
+  an old build (its GUID registration), with only the library's DLL new. Nothing reported the mismatch.
+- **Plug-in project of the working tree** instead: `.csproj` files under the git root (else the cwd), skipping `bin`,
+  `obj`, `node_modules`, `packages` and dot folders. A plug-in is `<TargetExt>.rhp/.gha`, or a `bin` that already has a
+  `.rhp`/`.gha` (post-build `.rhp`). One is used as is; several are asked about once with `inputlist` (synchronous, so
+  it works inside nvim-dap's `processId` coroutine and from `:Rhino build`) and remembered per working tree in
+  `stdpath("state")/rhino/projects.json`. None: the nearest `.csproj`, as before.
+- A cancelled pick returns nil and build/launch stop rather than fall back to some other project.
+- `:Rhino new` items still go into the buffer's own project (`buffer_project()`).
+- `:checkhealth rhino` reports the chosen project without asking (`project_root({ ask = false })`).
 
 ## Project file (`.rhino.lua`)
 

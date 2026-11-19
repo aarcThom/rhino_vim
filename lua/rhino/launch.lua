@@ -103,12 +103,16 @@ function M.start(runscript)
   if project and project.launch then
     pid, err = start_project(project, runscript)
   else
-    -- The project file's `output`, else bin/<configuration> of the nearest .csproj
+    -- The project file's `output`, else bin/<configuration> of the plug-in project
     local output
     if project and project.output then
       output = vim.fs.normalize(vim.fs.joinpath(project.root, project.output))
     else
-      output = vim.fs.joinpath(require("rhino.build").project_root(), "bin", require("rhino").config.configuration)
+      local dir = require("rhino.build").project_root()
+      if not dir then
+        return nil
+      end
+      output = vim.fs.joinpath(dir, "bin", require("rhino").config.configuration)
     end
     if not vim.uv.fs_stat(output) then
       local msg = "No build output at " .. output .. " (set `output` in " .. require("rhino.project").filename .. ")"

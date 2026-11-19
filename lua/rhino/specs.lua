@@ -13,6 +13,7 @@ return {
       { "<leader>Rl", "<cmd>Rhino launch<cr>", desc = "Build & Debug Rhino" },
       { "<leader>Rg", "<cmd>Rhino grasshopper<cr>", desc = "Build & Debug Grasshopper" },
       { "<leader>Ra", "<cmd>Rhino attach<cr>", desc = "Attach to Rhino" },
+      { "<leader>Rp", "<cmd>Rhino project<cr>", desc = "Pick Plug-in Project" },
       { "<leader>Rn", "<cmd>Rhino new<cr>", desc = "New from Template" },
     },
   },

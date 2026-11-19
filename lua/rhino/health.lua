@@ -73,9 +73,18 @@ function M.check()
     vim.health.info("Build and launch overrides: " .. project)
   end
 
+  local plugin = require("rhino.build").project_root({ ask = false })
+  if plugin then
+    vim.health.info("Builds and launches: " .. plugin)
+  else
+    vim.health.info(
+      "Several Rhino plug-in projects: the first build or launch asks which (change it with :Rhino project)"
+    )
+  end
+
   if check_executable("dotnet", "Install the .NET SDK: winget install Microsoft.DotNet.SDK.10") then
     -- `dotnet --version` resolves the SDK the way builds and Roslyn do, honouring global.json
-    local root = require("rhino.build").project_root()
+    local root = plugin or require("rhino.build").buffer_project()
     local sdk = vim.system({ "dotnet", "--version" }, { cwd = root, text = true }):wait()
     if sdk.code == 0 then
       vim.health.ok(("SDK %s for %s"):format(vim.trim(sdk.stdout), root))
